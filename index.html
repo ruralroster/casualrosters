@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rural Rosters - Shift Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: white;
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #2c3e50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1a252f;
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        /* Login Screen */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: white;
+        }
+
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+        }
+
+        .login-card h2 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+        }
+
+        /* Location Selection */
+        .location-selection {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Checkbox Styles */
+        .location-list {
+            margin: 20px 0;
+        }
+
+        .location-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 12px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .location-item:hover {
+            background: #f9f9f9;
+        }
+
+        .location-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .location-item label {
+            cursor: pointer;
+            margin-bottom: 0;
+            flex: 1;
+        }
+
+        /* Dashboard */
+        .dashboard {
+            display: none;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .tab-button {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 14px;
+            color: #666;
+            transition: all 0.2s;
+        }
+
+        .tab-button.active {
+            color: #2c3e50;
+            border-bottom-color: #2c3e50;
+        }
+
+        .tab-content {
+            display: none;
+            background: white;
+            padding: 20px;
+            border-radius: 4px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .tab-content h3 {
+            margin-bottom: 15px;
+        }
+
+        .tab-content p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        /* Messages */
+        .message {
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="loginScreen" class="login-container">
+    <div class="login-card">
+        <h2>Rural Rosters</h2>
+        <p style="margin-bottom: 20px;">Shift Manager</p>
+        <input type="email" id="emailInput" class="login-input" placeholder="Enter your email">
+        <input type="password" id="passwordInput" class="login-input" placeholder="Enter your password" onkeypress="if(event.key==='Enter') loginWithEmail()">
+        <button class="btn-primary login-button" onclick="loginWithEmail()">Login</button>
+    </div>
+</div>
+
+<!-- Location Setup Screen -->
+<!-- Main Dashboard -->
+<div id="mainDashboard" class="dashboard">
+    <header>
+        <h1>Rural Rosters</h1>
+        <div class="user-info">
+            <span id="userDisplayName"></span>
+            <button class="btn-secondary" onclick="logout()">Logout</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="messageContainer"></div>
+
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab('vacancies')">My Vacancies</button>
+            <button class="tab-button" onclick="switchTab('available')">Available Shifts</button>
+            <button class="tab-button" onclick="switchTab('settings')">Settings</button>
+        </div>
+
+        <!-- My Vacancies Tab -->
+        <div id="vacancies-tab" class="tab-content active">
+            <h3>My Vacancies</h3>
+            <div style="margin-bottom: 20px;">
+                <button class="btn-primary" onclick="addVacancyRow()">+ Add Shift</button>
+                <button class="btn-primary" onclick="saveVacancies()" style="margin-left: 10px;">Save Changes</button>
+            </div>
+            <div id="vacanciesContainer"></div>
+        </div>
+
+        <!-- Available Shifts Tab -->
+        <div id="available-tab" class="tab-content">
+            <h3>Available Shifts</h3>
+            <p>Select shifts to request:</p>
+            <div id="shiftsContainer"></div>
+            <div style="margin-top: 20px;">
+                <button class="btn-primary" onclick="requestShifts()">Request Selected Shifts</button>
+                <button class="btn-secondary" onclick="loadAvailableShifts()" style="margin-left: 10px;">Refresh</button>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings-tab" class="tab-content">
+            <h3>Settings</h3>
+            
+            <!-- Settings for Staff only -->
+            <div id="staffSettings">
+                <h4 style="margin-top: 30px; margin-bottom: 10px;">Work Location Preferences</h4>
+                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Select the locations where you can work:</p>
+                <div class="location-list" id="settingsLocationList"></div>
+                
+                <h4 style="margin-top: 30px; margin-bottom: 10px;">AST Qualifications</h4>
+                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Select your qualifications (Emergency available to all):</p>
+                <div class="location-list" id="settingsASTList"></div>
+                
+                <button class="btn-primary" onclick="saveAllSettings()" style="padding: 10px 20px; margin-top: 20px;">Save All Settings</button>
+            </div>
+            
+            <!-- Settings for Officers only -->
+            <div id="officerSettings" style="display: none;">
+                <p style="color: #666; margin-bottom: 20px;">Your rostering locations are managed by the administrator.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentUser = null;
+    let userRole = null;
+    let userLocations = [];
+    let userQuals = ['Emergency']; // Default qualifications
+    const allLocations = ['Innisfail', 'Mareeba', 'Tully', 'Yarrabah', 'Atherton', 'Mossman', 'Babinda', 'Cairns', 'Telehealth'];
+    let jobTypesByLocation = {}; // Will be populated by backend
+
+    function loginWithEmail() {
+        const email = document.getElementById('emailInput').value.trim();
+        const password = document.getElementById('passwordInput').value;
+        
+        if (!email || !password) {
+            showMessage('Please enter both email and password', 'error');
+            return;
+        }
+
+        google.script.run.withSuccessHandler(function(user) {
+            if (user && user.error) {
+                showMessage(user.error, 'error');
+                return;
+            }
+            if (user) {
+                currentUser = { email: user.email, name: user.name };
+                userRole = user.role;
+                userLocations = user.locations ? user.locations.split(',').map(l => l.trim()) : [];
+                userQuals = user.astQuals ? user.astQuals.split(',').map(q => q.trim()) : ['Emergency'];
+                
+                // For officers, load their assigned locations from Officer Assignments
+                if (userRole === 'Officer') {
+                    google.script.run.withSuccessHandler(function(locations) {
+                        userLocations = locations || [];
+                        showDashboard();
+                    }).getOfficerLocations(user.email);
+                } else {
+                    showDashboard();
+                }
+            }
+        }).checkUserExists(email, password);
+    }
+
+    // Location setup screen removed - only pre-registered users can log in
+
+    function updateLocationSelection() {
+        const checkboxes = document.querySelectorAll('#locationCheckboxes input[type="checkbox"]:checked');
+        userLocations = Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    function saveLocationPreferences() {
+        updateLocationSelection();
+        
+        // Get AST qualifications from setup screen
+        const astCheckboxes = document.querySelectorAll('#setupASTList input[type="checkbox"]:checked');
+        const selectedAst = Array.from(astCheckboxes).map(cb => cb.value);
+        userQuals = ['Emergency', ...selectedAst];
+        const uniqueAst = [...new Set(userQuals)]; // Remove duplicates
+        
+        if (userLocations.length === 0) {
+            showMessage('Please select at least one location', 'error');
+            return;
+        }
+
+        google.script.run.withSuccessHandler(function(user) {
+            currentUser = Object.assign(currentUser, user);
+            userRole = user.role;
+            userQuals = uniqueAst;
+            showDashboard();
+        }).saveNewUser(currentUser.email, currentUser.name, userLocations.join(','), currentUser.password, uniqueAst.join(','));
+    }
+
+    function showDashboard() {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainDashboard').style.display = 'block';
+        document.getElementById('userDisplayName').textContent = currentUser.name || currentUser.email;
+        
+        // Show loading message
+        showMessage('Loading shifts...', 'info');
+        
+        // Get all tab buttons
+        const vacanciesBtn = document.querySelectorAll('button.tab-button')[0];
+        const availableBtn = document.querySelectorAll('button.tab-button')[1];
+        
+        if (userRole === 'Officer') {
+            // Officer: show vacancies, hide available
+            if (vacanciesBtn) vacanciesBtn.style.display = 'block';
+            if (availableBtn) availableBtn.style.display = 'none';
+            setTimeout(loadVacancies, 200);
+            
+            // Check for pending requests and show notification
+            setTimeout(function() {
+                google.script.run.withSuccessHandler(function(count) {
+                    if (count && count > 0) {
+                        showMessage('⚠️ You have ' + count + ' pending shift request(s) to review', 'warning');
+                    }
+                }).countPendingRequests(currentUser.email);
+            }, 1000);
+        } else {
+            // Staff: hide vacancies, show available
+            if (vacanciesBtn) vacanciesBtn.style.display = 'none';
+            if (availableBtn) availableBtn.style.display = 'block';
+            setTimeout(loadAvailableShifts, 200);
+        }
+        
+        loadSettingsScreen();
+    }
+
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(tabName + '-tab').classList.add('active');
+        event.target.classList.add('active');
+        
+        if (tabName === 'settings') {
+            loadSettingsScreen();
+        }
+    }
+
+    function loadSettingsScreen() {
+        // Show/hide settings based on role
+        if (userRole === 'Officer') {
+            document.getElementById('officerSettings').style.display = 'block';
+            document.getElementById('staffSettings').style.display = 'none';
+        } else {
+            document.getElementById('staffSettings').style.display = 'block';
+            document.getElementById('officerSettings').style.display = 'none';
+            
+            // Load location preferences
+            const locContainer = document.getElementById('settingsLocationList');
+            locContainer.innerHTML = '';
+            
+            allLocations.forEach(location => {
+                const div = document.createElement('div');
+                div.className = 'location-item';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = location;
+                checkbox.id = 'settings-' + location;
+                checkbox.checked = userLocations.includes(location);
+                
+                const label = document.createElement('label');
+                label.htmlFor = 'settings-' + location;
+                label.textContent = location;
+                
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                locContainer.appendChild(div);
+            });
+            
+            // Load AST qualifications
+            const astContainer = document.getElementById('settingsASTList');
+            astContainer.innerHTML = '';
+            
+            const astQuals = ['Emergency', 'Anaesthetics', 'O&G'];
+            astQuals.forEach(qual => {
+                const div = document.createElement('div');
+                div.className = 'location-item';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = qual;
+                checkbox.id = 'ast-' + qual;
+                checkbox.disabled = qual === 'Emergency';
+                checkbox.checked = userQuals && userQuals.includes(qual);
+                
+                const label = document.createElement('label');
+                label.htmlFor = 'ast-' + qual;
+                label.textContent = qual + (qual === 'Emergency' ? ' (everyone)' : '');
+                
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                astContainer.appendChild(div);
+            });
+        }
+    }
+
+    function saveAllSettings() {
+        // Get selected locations
+        const locCheckboxes = document.querySelectorAll('#settingsLocationList input[type="checkbox"]:checked');
+        const newLocations = Array.from(locCheckboxes).map(cb => cb.value);
+        
+        if (newLocations.length === 0) {
+            showMessage('Please select at least one location', 'error');
+            return;
+        }
+
+        // Get selected AST qualifications (Emergency always included)
+        const astCheckboxes = document.querySelectorAll('#settingsASTList input[type="checkbox"]:checked');
+        const selectedAst = Array.from(astCheckboxes).map(cb => cb.value);
+        const newAst = ['Emergency', ...selectedAst]; // Always include Emergency
+        const uniqueAst = [...new Set(newAst)]; // Remove duplicates
+
+        // Save locations
+        google.script.run.withSuccessHandler(function(locSuccess) {
+            if (locSuccess) {
+                userLocations = newLocations;
+                
+                // Then save AST qualifications
+                google.script.run.withSuccessHandler(function(astSuccess) {
+                    if (astSuccess) {
+                        userQuals = uniqueAst;
+                        showMessage('Settings updated successfully', 'success');
+                        loadAvailableShifts();
+                    } else {
+                        showMessage('Failed to update qualifications', 'error');
+                    }
+                }).updateUserAST(currentUser.email, uniqueAst.join(','));
+            } else {
+                showMessage('Failed to update locations', 'error');
+            }
+        }).updateUserLocations(currentUser.email, newLocations.join(','), userRole);
+    }
+
+    function showMessage(text, type) {
+        const container = document.getElementById('messageContainer');
+        const messageEl = document.createElement('div');
+        messageEl.className = 'message ' + type;
+        messageEl.textContent = text;
+        container.innerHTML = '';
+        container.appendChild(messageEl);
+        
+        setTimeout(() => {
+            messageEl.remove();
+        }, 5000);
+    }
+    
+    function clearMessage() {
+        const container = document.getElementById('messageContainer');
+        container.innerHTML = '';
+    }
+
+    function loadVacancies() {
+        if (userRole !== 'Officer') return;
+        
+        // Load job types FIRST, then vacancies
+        google.script.run.withSuccessHandler(function(jobTypes) {
+            jobTypesByLocation = jobTypes || {};
+            console.log("Job types loaded:", jobTypesByLocation);
+            
+            // Small delay to ensure jobTypesByLocation is set
+            setTimeout(function() {
+                google.script.run.withSuccessHandler(function(vacancies) {
+                    console.log("Vacancies loaded:", vacancies);
+                    renderVacanciesTable(vacancies || []);
+                    clearMessage(); // Clear "Loading shifts..." message
+                }).getOfficerVacancies(currentUser.email);
+            }, 100);
+        }).getJobTypesForOfficer(currentUser.email);
+    }
+
+    function renderVacanciesTable(vacancies) {
+        const container = document.getElementById('vacanciesContainer');
+        
+        if (!vacancies || vacancies.length === 0) {
+            container.innerHTML = '<p style="color: #999;">No vacancies yet</p>';
+            return;
+        }
+
+        // Sort vacancies chronologically
+        const sorted = vacancies.sort((a, b) => {
+            const dateA = parseDate(a.date);
+            const dateB = parseDate(b.date);
+            return dateA - dateB;
+        });
+
+        console.log("Rendering vacancies. jobTypesByLocation:", jobTypesByLocation);
+
+        let html = '<table style="width: 100%; border-collapse: collapse;"><tr style="background: #f9f9f9;"><th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Date</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Location</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Job Type</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Action</th></tr>';
+        
+        sorted.forEach((vac, idx) => {
+            let dateString = '';
+            
+            // Convert DD/MM/YYYY to YYYY-MM-DD for date input
+            if (vac.date && vac.date.includes('/')) {
+                const parts = vac.date.split('/');
+                if (parts.length === 3) {
+                    const day = String(parts[0]).padStart(2, '0');
+                    const month = String(parts[1]).padStart(2, '0');
+                    const year = parts[2];
+                    dateString = year + '-' + month + '-' + day;
+                }
+            } else {
+                dateString = vac.date || '';
+            }
+            
+            const location = String(vac.location).trim();
+            const jobTypes = jobTypesByLocation[location] || [];
+            
+            console.log("Row " + idx + ": location=" + location + ", jobTypes=" + jobTypes.join(","));
+            
+            let jobTypeOptions = '<select class="vac-jobtype" style="width: 100%; padding: 4px; border: 1px solid #ddd;"><option value="">Select Job Type</option>';
+            jobTypes.forEach(jt => {
+                const selected = jt === vac.jobType ? ' selected' : '';
+                jobTypeOptions += '<option value="' + jt + '"' + selected + '>' + jt + '</option>';
+            });
+            jobTypeOptions += '</select>';
+            
+            html += '<tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 10px;"><input type="date" class="vac-date" value="' + dateString + '" style="width: 100%; padding: 4px; border: 1px solid #ddd;"></td><td style="padding: 10px;"><input type="text" class="vac-location" value="' + location + '" style="width: 100%; padding: 4px; border: 1px solid #ddd;" disabled></td><td style="padding: 10px;">' + jobTypeOptions + '</td><td style="padding: 10px;"><button class="btn-secondary" onclick="removeVacancyRow(this)" style="padding: 4px 8px; font-size: 12px;">Remove</button></td></tr>';
+        });
+        html += '</table>';
+        container.innerHTML = html;
+    }
+    
+    function parseDate(dateStr) {
+        if (!dateStr) return new Date(0);
+        if (dateStr.includes('/')) {
+            const [day, month, year] = dateStr.split('/');
+            return new Date(year, month - 1, day);
+        }
+        return new Date(dateStr);
+    }
+
+    function addVacancyRow() {
+        const container = document.getElementById('vacanciesContainer');
+        let table = container.querySelector('table');
+        const location = userLocations[0];
+        const jobTypes = jobTypesByLocation[location] || [];
+        
+        // If no table exists, create one with a header row (reversed: Date, Location, Job Type)
+        if (!table) {
+            let html = '<table style="width: 100%; border-collapse: collapse;"><tr style="background: #f9f9f9;"><th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Date</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Location</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Job Type</th><th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Action</th></tr></table>';
+            container.innerHTML = html;
+            table = container.querySelector('table');
+        }
+        
+        // Location dropdown
+        let locationOptions = '<select class="vac-location" style="width: 100%; padding: 4px; border: 1px solid #ddd;" onchange="updateJobTypeDropdown(this)"><option value="">Step 2: Select Location</option>';
+        userLocations.forEach(loc => {
+            locationOptions += '<option value="' + loc + '">' + loc + '</option>';
+        });
+        locationOptions += '</select>';
+        
+        let jobTypeOptions = '<select class="vac-jobtype" style="width: 100%; padding: 4px; border: 1px solid #ddd;"><option value="">Step 3: Select Job Type</option></select>';
+        
+        const newRow = table.insertRow();
+        newRow.innerHTML = '<td style="padding: 10px;"><input type="date" class="vac-date" placeholder="Step 1: Select Date" style="width: 100%; padding: 4px; border: 1px solid #ddd;"></td><td style="padding: 10px;">' + locationOptions + '</td><td style="padding: 10px;">' + jobTypeOptions + '</td><td style="padding: 10px;"><button class="btn-secondary" onclick="removeVacancyRow(this)" style="padding: 4px 8px; font-size: 12px;">Remove</button></td>';
+    }
+    
+    function updateJobTypeDropdown(locationSelect) {
+        const row = locationSelect.closest('tr');
+        const location = locationSelect.value;
+        const jobTypeSelect = row.querySelector('.vac-jobtype');
+        const jobTypes = jobTypesByLocation[location] || [];
+        
+        jobTypeSelect.innerHTML = '<option value="">Step 3: Select Job Type</option>';
+        jobTypes.forEach(jt => {
+            jobTypeSelect.innerHTML += '<option value="' + jt + '">' + jt + '</option>';
+        });
+    }
+
+    function removeVacancyRow(btn) {
+        btn.parentElement.parentElement.remove();
+    }
+
+    function saveVacancies() {
+        const rows = document.querySelectorAll('#vacanciesContainer table tbody tr, #vacanciesContainer table tr');
+        const vacancies = [];
+        
+        rows.forEach(row => {
+            const dateInput = row.querySelector('.vac-date');
+            const jobtypeInput = row.querySelector('.vac-jobtype');
+            const locationInput = row.querySelector('.vac-location');
+            
+            if (dateInput && jobtypeInput && locationInput) {
+                let date = dateInput.value; // YYYY-MM-DD from date input
+                const jobType = jobtypeInput.value;
+                const location = locationInput.value;
+                
+                // Convert YYYY-MM-DD to DD/MM/YYYY
+                if (date && date.includes('-')) {
+                    const [year, month, day] = date.split('-');
+                    date = day + '/' + month + '/' + year;
+                }
+                
+                if (date && jobType && location) {
+                    vacancies.push({ date, jobType, location });
+                }
+            }
+        });
+
+        google.script.run.withSuccessHandler(function() {
+            showMessage('✓ Vacancies saved successfully', 'success');
+            loadVacancies();
+        }).saveOfficerVacancies(currentUser.email, vacancies);
+    }
+
+    let allShifts = [];
+
+    function loadAvailableShifts() {
+        google.script.run.withSuccessHandler(function(shifts) {
+            allShifts = shifts || [];
+            renderAvailableShifts(shifts);
+            clearMessage(); // Clear "Loading shifts..." message
+        }).getAvailableShifts(currentUser.email, userLocations);
+    }
+
+    function renderAvailableShifts(shifts) {
+        const container = document.getElementById('shiftsContainer');
+        
+        if (!shifts || shifts.length === 0) {
+            container.innerHTML = '<p style="color: #999;">No available shifts for your locations</p>';
+            return;
+        }
+
+        // Sort shifts chronologically
+        const sorted = shifts.sort((a, b) => {
+            const dateA = parseDate(a.date);
+            const dateB = parseDate(b.date);
+            return dateA - dateB;
+        });
+
+        let html = '';
+        sorted.forEach((shift, idx) => {
+            const shiftKey = shift.jobType + ' @ ' + shift.location + ' (' + shift.date + ')';
+            html += '<div class="location-item"><input type="checkbox" id="shift-' + idx + '" value="' + idx + '"><label for="shift-' + idx + '">' + shiftKey + '</label></div>';
+        });
+        
+        container.innerHTML = html;
+    }
+
+    function requestShifts() {
+        const checkboxes = document.querySelectorAll('#shiftsContainer input[type="checkbox"]:checked');
+        if (checkboxes.length === 0) {
+            showMessage('Please select at least one shift', 'error');
+            return;
+        }
+
+        const selected = Array.from(checkboxes).map(cb => allShifts[parseInt(cb.value)]);
+        const count = selected.length;
+        
+        google.script.run.withSuccessHandler(function() {
+            showMessage('✓ Shift(s) request sent successfully! Rostering officers have been notified.', 'success');
+            setTimeout(function() {
+                loadAvailableShifts();
+            }, 1500);
+        }).requestShifts(currentUser.email, currentUser.name, selected);
+    }
+
+    function logout() {
+        currentUser = null;
+        userRole = null;
+        userLocations = [];
+        document.getElementById('mainDashboard').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'flex';
+        document.getElementById('emailInput').value = '';
+        document.getElementById('passwordInput').value = '';
+    }
+</script>
+
+</body>
+</html>
