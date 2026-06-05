@@ -1,0 +1,7 @@
+{
+  "name": "rural-rosters-proxy",
+  "version": "1.0.0",
+  "description": "CORS proxy for Rural Rosters",
+  "main": "index.js",
+  "runtime": "nodejs20"
+}
