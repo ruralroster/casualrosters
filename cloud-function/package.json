@@ -3,11 +3,10 @@
   "version": "1.0.0",
   "description": "CORS proxy for Rural Rosters",
   "main": "index.js",
-  "runtime": "nodejs20",
   "scripts": {
     "start": "node index.js"
   },
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   }
 }
