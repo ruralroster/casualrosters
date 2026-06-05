@@ -283,19 +283,9 @@
     
     // On page load, verify connection
     window.addEventListener('load', async function() {
-        document.getElementById('loadingText').textContent = 'Connecting...';
-        try {
-            const response = await fetch(BACKEND_URL + '?action=getHttpApiUrl');
-            const data = await response.json();
-            if (data && data.url) {
-                // Connection verified
-                document.getElementById('loadingText').style.display = 'none';
-            } else {
-                showMessage('Error: Backend not configured. Contact your administrator.', 'error');
-            }
-        } catch(err) {
-            showMessage('Connection error: ' + err, 'error');
-        }
+        // No verification needed - just use the hardcoded BACKEND_URL
+        // Skip the fetch() to avoid CORS issues
+        document.getElementById('loadingText').style.display = 'none';
     });
     
     // HTTP fetch-based API shim
