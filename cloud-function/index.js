@@ -14,7 +14,8 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwKdwehZeiedmYs
 
 // Create HTTP server for Cloud Run
 const server = http.createServer((req, res) => {
-  console.log(`${req.method} ${req.url}`);
+  // Debug: Log all requests
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   
   // Set CORS headers FIRST, before anything else
   res.setHeader('Access-Control-Allow-Origin', '*');
