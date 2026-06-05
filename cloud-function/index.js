@@ -1,52 +1,69 @@
 /**
- * Google Cloud Function - CORS Proxy for Rural Rosters
+ * Google Cloud Run - CORS Proxy for Rural Rosters
  * 
- * Deployed as an HTTP Cloud Function
+ * Deployed as a Cloud Run service via Cloud Build
  * Accepts POST requests from GitHub Pages
  * Forwards to Apps Script backend with full CORS support
  */
 
 const https = require('https');
-const url = require('url');
+const http = require('http');
 
 // UPDATE THIS with your Apps Script deployment URL
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID_HERE/exechttps://script.google.com/macros/s/AKfycbwKdwehZeiedmYsmso-3rHbTWqY56Krnp1uSPqJ50AYwLtglISqrLCiT0AjFCFCi7Nf/exec';
 
-exports.ruralRostersProxy = (req, res) => {
+// Create HTTP server for Cloud Run
+const server = http.createServer((req, res) => {
   // Enable CORS
-  res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type');
-  res.set('Access-Control-Max-Age', '3600');
-  res.set('Content-Type', 'application/json');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Max-Age', '3600');
+  res.setHeader('Content-Type', 'application/json');
 
   // Handle preflight
   if (req.method === 'OPTIONS') {
-    res.status(204).send('');
+    res.writeHead(204);
+    res.end();
     return;
   }
 
   // Only accept POST
   if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
+    res.writeHead(405);
+    res.end(JSON.stringify({ error: 'Method not allowed' }));
     return;
   }
 
-  // Get the request body
-  const requestBody = req.body;
-
-  // Forward to Apps Script
-  forwardToAppsScript(requestBody, (error, response) => {
-    if (error) {
-      console.error('Error forwarding to Apps Script:', error);
-      res.status(500).json({ error: error.toString() });
-      return;
-    }
-
-    // Return the response from Apps Script
-    res.status(200).json(response);
+  // Collect request body
+  let body = '';
+  req.on('data', chunk => {
+    body += chunk.toString();
   });
-};
+
+  req.on('end', () => {
+    try {
+      const requestBody = JSON.parse(body);
+      
+      // Forward to Apps Script
+      forwardToAppsScript(requestBody, (error, response) => {
+        if (error) {
+          console.error('Error forwarding to Apps Script:', error);
+          res.writeHead(500);
+          res.end(JSON.stringify({ error: error.toString() }));
+          return;
+        }
+        
+        res.writeHead(200);
+        res.end(JSON.stringify(response));
+      });
+    } catch (err) {
+      console.error('Error parsing request:', err);
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: 'Invalid JSON' }));
+    }
+  });
+});
 
 function forwardToAppsScript(body, callback) {
   const options = {
@@ -81,3 +98,9 @@ function forwardToAppsScript(body, callback) {
   req.write(JSON.stringify(body));
   req.end();
 }
+
+// Start server on port 8080 (required by Cloud Run)
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});
