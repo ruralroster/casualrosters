@@ -10,7 +10,7 @@ const https = require('https');
 const http = require('http');
 
 // UPDATE THIS with your Apps Script deployment URL
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZL-vlu7bOkfEnzA-z9Q31YYQpGBKQvuEdrbu-R0nVYfk39Jdod8k0PYBy3EVnQ-zu/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZL-vlu7bOkfEnzA-z9Q31YYQpGBKQvuEdrbu-R0nVYfk39Jdod8k0PYBy3EVnQ-zu/userweb';
 
 // Create HTTP server for Cloud Run
 const server = http.createServer((req, res) => {
