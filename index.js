@@ -1,15 +1,15 @@
 /**
- * Rural Rosters Backend - Node.js
- * Connects directly to Google Sheets API 
- * Replaces Apps Script entirely
+ * Rural Rosters Backend - Node.js with Email
+ * Connects directly to Google Sheets API + sends emails via Gmail
  */
 
 const http = require('http');
 const { google } = require('googleapis');
 const { JWT } = require('google-auth-library');
+const nodemailer = require('nodemailer');
 
-// Service account credentials (from JSON file)
-const SERVICE_ACCOUNT = { 
+// Service account credentials (Sheets API)
+const SERVICE_ACCOUNT = {
   type: "service_account",
   project_id: "rural-rosters",
   private_key_id: "3f30d8812c36bf4d32ab0492eee60ae27f27d829",
@@ -23,9 +23,13 @@ const SERVICE_ACCOUNT = {
   universe_domain: "googleapis.com"
 };
 
+// Gmail credentials - CHANGE THESE WHEN RuralRoster@gmail.com IS BACK
+const GMAIL_USER = 'dr.bengladwin@gmail.com';
+const GMAIL_APP_PASSWORD = 'isnx mjkk jtzj ubzj';
+
 const SHEET_ID = '1iG4SwN4LzFnzKNht2uy8R8YV6XKIftRTbmfW7_YZwtM';
 
-// Initialize JWT client
+// Initialize JWT client for Sheets
 const auth = new JWT({
   email: SERVICE_ACCOUNT.client_email,
   key: SERVICE_ACCOUNT.private_key,
@@ -33,6 +37,15 @@ const auth = new JWT({
 });
 
 const sheets = google.sheets({ version: 'v4', auth });
+
+// Initialize Nodemailer
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: GMAIL_USER,
+    pass: GMAIL_APP_PASSWORD
+  }
+});
 
 // HTTP Server
 const server = http.createServer((req, res) => {
@@ -77,26 +90,8 @@ const server = http.createServer((req, res) => {
         case 'getOfficerVacancies':
           result = await getOfficerVacancies(params.email);
           break;
-        case 'saveOfficerVacancies':
-          result = await saveOfficerVacancies(params.email, params.vacancies);
-          break;
-        case 'getAvailableShifts':
-          result = await getAvailableShifts(params.email, params.locations);
-          break;
         case 'requestShifts':
           result = await requestShifts(params.email, params.name, params.shifts);
-          break;
-        case 'getJobTypesForOfficer':
-          result = await getJobTypesForOfficer(params.email);
-          break;
-        case 'updateUserLocations':
-          result = await updateUserLocations(params.email, params.locations, params.role);
-          break;
-        case 'updateUserAST':
-          result = await updateUserAST(params.email, params.astQuals);
-          break;
-        case 'countPendingRequests':
-          result = await countPendingRequests(params.email);
           break;
         default:
           result = { error: 'Unknown action: ' + action };
@@ -209,167 +204,111 @@ async function getOfficerVacancies(email) {
   }
 }
 
-async function saveOfficerVacancies(email, vacancies) {
+async function requestShifts(officerEmail, officerName, shifts) {
   try {
-    const locations = await getOfficerLocations(email);
+    const timestamp = new Date().toLocaleString();
     
-    for (let location of locations) {
-      const locationVacs = vacancies.filter(v => v.location === location);
+    console.log(`Shift request from ${officerName} (${officerEmail}) for ${shifts.length} shifts`);
+    
+    // Find rostering officers for each location
+    const officerResult = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'Rostering Officers!A2:C'
+    });
+
+    const officerRows = officerResult.data.values || [];
+    const officersByLocation = {};
+
+    for (let row of officerRows) {
+      const location = String(row[0]).trim();
+      const rostName = String(row[1]).trim();
+      const rostEmail = String(row[2]).trim();
       
-      if (locationVacs.length > 0) {
-        const values = locationVacs.map(v => [v.date, v.jobType, v.location, '']);
-        
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SHEET_ID,
-          range: `Vacancies - ${location}!A2:D${locationVacs.length + 1}`,
-          valueInputOption: 'RAW',
-          resource: { values }
-        });
+      if (!officersByLocation[location]) {
+        officersByLocation[location] = [];
+      }
+      officersByLocation[location].push({ name: rostName, email: rostEmail });
+    }
+
+    // Log each request to Requests sheet
+    const requestsToAdd = [];
+    for (let shift of shifts) {
+      requestsToAdd.push([
+        timestamp,
+        officerEmail,
+        officerName,
+        shift.date,
+        shift.jobType,
+        shift.location,
+        'Pending',
+        '',
+        ''
+      ]);
+    }
+
+    // Append to Requests sheet
+    if (requestsToAdd.length > 0) {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: SHEET_ID,
+        range: 'Requests!A2:I',
+        valueInputOption: 'RAW',
+        resource: { values: requestsToAdd }
+      });
+      console.log(`Logged ${requestsToAdd.length} requests to Requests sheet`);
+    }
+
+    // Group shifts by location
+    const shiftsByLocation = {};
+    for (let shift of shifts) {
+      if (!shiftsByLocation[shift.location]) {
+        shiftsByLocation[shift.location] = [];
+      }
+      shiftsByLocation[shift.location].push(shift);
+    }
+
+    // Send emails to rostering officers
+    for (let location in shiftsByLocation) {
+      const locationShifts = shiftsByLocation[location];
+      const officers = officersByLocation[location] || [];
+      
+      const shiftList = locationShifts
+        .map(s => `• ${s.date} — ${s.jobType}`)
+        .join('\n');
+
+      const emailBody = `Shift Request from ${officerName} (${officerEmail})
+
+Location: ${location}
+Shifts Requested:
+${shiftList}
+
+Status: Pending Approval
+
+Please review at: https://ruralroster.github.io/casualrosters/
+
+---
+Rural Rosters System`;
+
+      // Send to each rostering officer for that location
+      for (let officer of officers) {
+        try {
+          await transporter.sendMail({
+            from: GMAIL_USER,
+            to: officer.email,
+            cc: 'ruralroster@gmail.com',
+            subject: `[Rural Rosters] New Shift Request - ${location}`,
+            text: emailBody
+          });
+          console.log(`Email sent to ${officer.email}`);
+        } catch (err) {
+          console.error(`Failed to email ${officer.email}:`, err);
+        }
       }
     }
 
-    return { success: true };
+    return { success: true, message: 'Request submitted and emails sent' };
   } catch (err) {
-    console.error('saveOfficerVacancies error:', err);
+    console.error('requestShifts error:', err);
     return { error: err.toString() };
-  }
-}
-
-async function getAvailableShifts(userEmail, userLocations) {
-  try {
-    const result = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: 'Master Vacancies!A2:D'
-    });
-
-    const rows = result.data.values || [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const filtered = rows
-      .filter(row => {
-        if (!row[0] || !row[1] || !row[2]) return false;
-        
-        // Filter by location
-        if (!userLocations.includes(row[2])) return false;
-
-        // Filter out past dates
-        const vacDate = parseDate(row[0]);
-        return vacDate >= today;
-      })
-      .map(row => ({
-        date: formatDate(row[0]),
-        jobType: String(row[1]).trim(),
-        location: String(row[2]).trim()
-      }));
-
-    return filtered;
-  } catch (err) {
-    console.error('getAvailableShifts error:', err);
-    return [];
-  }
-}
-
-async function requestShifts(userEmail, userName, shifts) {
-  try {
-    console.log(`Shift request from ${userName} (${userEmail}) for ${shifts.length} shifts`);
-    // TODO: Implement email sending
-    return { success: true };
-  } catch (err) {
-    return { error: err.toString() };
-  }
-}
-
-async function getJobTypesForOfficer(email) {
-  try {
-    const locations = await getOfficerLocations(email);
-    const shiftTypes = await getShiftTypes();
-    
-    const allJobTypes = {};
-    for (let location of locations) {
-      allJobTypes[location] = shiftTypes
-        .filter(st => st.location === location)
-        .map(st => st.jobType)
-        .filter((v, i, a) => a.indexOf(v) === i);
-    }
-
-    return allJobTypes;
-  } catch (err) {
-    return {};
-  }
-}
-
-async function updateUserLocations(email, locations, role) {
-  try {
-    const result = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: 'Users!A2:D'
-    });
-
-    const rows = result.data.values || [];
-    for (let i = 0; i < rows.length; i++) {
-      if (rows[i][0] === email && rows[i][3] === role) {
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SHEET_ID,
-          range: `Users!C${i + 2}`,
-          valueInputOption: 'RAW',
-          resource: { values: [[locations]] }
-        });
-        return { success: true };
-      }
-    }
-
-    return { error: 'User not found' };
-  } catch (err) {
-    return { error: err.toString() };
-  }
-}
-
-async function updateUserAST(email, astQuals) {
-  try {
-    const result = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: 'Users!A2:A'
-    });
-
-    const rows = result.data.values || [];
-    for (let i = 0; i < rows.length; i++) {
-      if (rows[i][0] === email) {
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SHEET_ID,
-          range: `Users!G${i + 2}`,
-          valueInputOption: 'RAW',
-          resource: { values: [[astQuals]] }
-        });
-        return { success: true };
-      }
-    }
-
-    return { error: 'User not found' };
-  } catch (err) {
-    return { error: err.toString() };
-  }
-}
-
-async function countPendingRequests(officerEmail) {
-  // TODO: Implement request tracking
-  return 0;
-}
-
-async function getShiftTypes() {
-  try {
-    const result = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: 'Shift Types!A2:E'
-    });
-
-    const rows = result.data.values || [];
-    return rows.map(row => ({
-      jobType: row[0],
-      location: row[1]
-    }));
-  } catch (err) {
-    return [];
   }
 }
 
@@ -384,18 +323,6 @@ function formatDate(dateVal) {
   }
   
   return String(dateVal);
-}
-
-function parseDate(dateStr) {
-  if (!dateStr) return new Date(0);
-  if (dateStr instanceof Date) {
-    return new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate());
-  }
-  if (String(dateStr).includes('/')) {
-    const parts = String(dateStr).split('/');
-    return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-  }
-  return new Date(0);
 }
 
 // Start server
