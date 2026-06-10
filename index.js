@@ -1,6 +1,6 @@
 /**
  * Rural Rosters Backend - Node.js
- * Connects directly to Google Sheets API
+ * Connects directly to Google Sheets API 
  * Replaces Apps Script entirely
  */
 
