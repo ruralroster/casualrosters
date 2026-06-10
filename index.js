@@ -9,7 +9,7 @@ const { google } = require('googleapis');
 const { JWT } = require('google-auth-library');
 
 // Service account credentials (from JSON file)
-const SERVICE_ACCOUNT = {
+const SERVICE_ACCOUNT = { 
   type: "service_account",
   project_id: "rural-rosters",
   private_key_id: "3f30d8812c36bf4d32ab0492eee60ae27f27d829",
