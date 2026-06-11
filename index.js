@@ -364,7 +364,7 @@ async function requestShifts(officerEmail, officerName, shifts) {
 
           // Deny mailto link
           const denySubject = `Your shift request could not be approved`;
-          const denyBody = `Dear ${officerName},\n\nUnfortunately, we are unable to approve your request for the following shift(s) at this time:\n${locationShifts.map(s => `${s.date} - ${s.jobType} @ ${s.location}`).join('\n')}\n\nPlease contact the ${officer.name} (${officer.email}) if you have any questions.\n\nSincerely,\n${officer.name}`;
+          const denyBody = `Dear ${officerName},\n\nUnfortunately, we are unable to approve your request for the following shift(s) at this time:\n${locationShifts.map(s => `${s.date} - ${s.jobType} @ ${s.location}`).join('\n')}\n\nPlease contact ${officer.name}: mailto:${officer.email}\n\nSincerely,\n${officer.name}`;
           const denyMail = `mailto:${officerEmail}?subject=${encodeURIComponent(denySubject)}&body=${encodeURIComponent(denyBody)}`;
 
           const htmlBody = `<p>Dear ${officer.name},</p>
