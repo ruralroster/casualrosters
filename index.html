@@ -276,15 +276,11 @@
 
 <script>
     // ========== GITHUB PAGES CONFIGURATION ==========
-    // UPDATE THIS with your Apps Script deployment URL
-    // When you redeploy the backend: update Settings!B3 AND this line
     
     let BACKEND_URL = 'https://ruralrostersproxy-168129620374.australia-southeast1.run.app';
     
     // On page load, verify connection
     window.addEventListener('load', async function() {
-        // No verification needed - just use the hardcoded BACKEND_URL
-        // Skip the fetch() to avoid CORS issues
         document.getElementById('loadingText').style.display = 'none';
     });
     
@@ -306,12 +302,12 @@
                             const result = await callBackend('getOfficerVacancies', {email});
                             if (callback) callback(result);
                         },
-                        saveOfficerVacancies: async (email, vacancies) => {
-                            const result = await callBackend('saveOfficerVacancies', {email, vacancies});
+                        getStaffAvailableShifts: async (email) => {
+                            const result = await callBackend('getStaffAvailableShifts', {email});
                             if (callback) callback(result);
                         },
-                        getAvailableShifts: async (email, locations) => {
-                            const result = await callBackend('getAvailableShifts', {email, locations});
+                        saveOfficerVacancies: async (email, vacancies) => {
+                            const result = await callBackend('saveOfficerVacancies', {email, vacancies});
                             if (callback) callback(result);
                         },
                         requestShifts: async (email, name, shifts) => {
@@ -591,11 +587,19 @@
     }
 
     function loadAvailableShifts() {
-        google.script.run.withSuccessHandler(function(shifts) {
-            allShifts = shifts || [];
-            renderAvailableShifts(shifts);
-            clearMessage();
-        }).getAvailableShifts(currentUser.email, userLocations);
+        if (userRole === 'Officer') {
+            google.script.run.withSuccessHandler(function(shifts) {
+                allShifts = shifts || [];
+                renderAvailableShifts(shifts);
+                clearMessage();
+            }).getOfficerVacancies(currentUser.email);
+        } else {
+            google.script.run.withSuccessHandler(function(shifts) {
+                allShifts = shifts || [];
+                renderAvailableShifts(shifts);
+                clearMessage();
+            }).getStaffAvailableShifts(currentUser.email);
+        }
     }
 
     function renderAvailableShifts(shifts) {
