@@ -1,6 +1,6 @@
 /**
- * Rural Rosters Backend - Node.js with Email
- * Connects directly to Google Sheets API + sends emails via Gmail
+ * Rural Rosters Backend - Node.js with Email (HTML Format)
+ * Connects directly to Google Sheets API + sends HTML emails via Gmail
  */
 
 const http = require('http');
@@ -25,7 +25,7 @@ const SERVICE_ACCOUNT = {
 
 // Gmail credentials
 const GMAIL_USER = 'ruralroster@gmail.com';
-const GMAIL_APP_PASSWORD = 'kyij mbwe ejlq nxfh';
+const GMAIL_APP_PASSWORD = 'gckg msat pnzq ltug';
 
 const SHEET_ID = '1iG4SwN4LzFnzKNht2uy8R8YV6XKIftRTbmfW7_YZwtM';
 
@@ -352,29 +352,35 @@ async function requestShifts(officerEmail, officerName, shifts) {
       // Format shift list for email
       const shiftList = locationShifts
         .map(s => `${s.date} - ${s.jobType} @ ${location}`)
-        .join('\n');
+        .join('<br>');
 
       // Send to each rostering officer for that location
       for (let officer of officers) {
         try {
           // Approve mailto link
           const approveSubject = `Your application to cover shifts has been approved`;
-          const approveBody = `Dear ${officerName},\n\nYou have been approved for the shift(s):\n${shiftList}\n\nThanks for helping out Dr ${officerName}!\n\nSincerely\n${officer.name}`;
+          const approveBody = `Dear ${officerName},\n\nYou have been approved for the shift(s):\n${locationShifts.map(s => `${s.date} - ${s.jobType} @ ${s.location}`).join('\n')}\n\nThanks for helping out Dr ${officerName}!\n\nSincerely\n${officer.name}`;
           const approveMail = `mailto:${officerEmail}?subject=${encodeURIComponent(approveSubject)}&body=${encodeURIComponent(approveBody)}`;
 
           // Deny mailto link
           const denySubject = `Your shift request could not be approved`;
-          const denyBody = `Dear ${officerName},\n\nUnfortunately, we are unable to approve your request for the following shift(s) at this time:\n${shiftList}\n\nPlease contact the ${officer.name} (${officer.email}) if you have any questions.\n\nSincerely,\n${officer.name}`;
+          const denyBody = `Dear ${officerName},\n\nUnfortunately, we are unable to approve your request for the following shift(s) at this time:\n${locationShifts.map(s => `${s.date} - ${s.jobType} @ ${s.location}`).join('\n')}\n\nPlease contact the ${officer.name} (${officer.email}) if you have any questions.\n\nSincerely,\n${officer.name}`;
           const denyMail = `mailto:${officerEmail}?subject=${encodeURIComponent(denySubject)}&body=${encodeURIComponent(denyBody)}`;
 
-          const emailBody = `Dear ${officer.name},\n\n${officerName} is requesting to cover the following shifts:\n${shiftList}\n\nTo approve and reply to ${officerName}: ${approveMail}\nTo deny and reply to ${officerName}: ${denyMail}\n\nTo remove approved shifts from the system: Visit https://ruralroster.github.io/casualrosters/, log in with your credentials, go to "My Vacancies", and remove the approved shift.\n\nThank you,\nRural Rosters Support`;
+          const htmlBody = `<p>Dear ${officer.name},</p>
+<p>${officerName} is requesting to cover the following shifts:</p>
+<p><strong>${shiftList}</strong></p>
+<p><a href="${approveMail}">To approve and reply to ${officerName}</a></p>
+<p><a href="${denyMail}">To deny and reply to ${officerName}</a></p>
+<p>To remove approved shifts from the system: Visit <a href="https://ruralroster.github.io/casualrosters/">https://ruralroster.github.io/casualrosters/</a>, log in with your credentials, go to "My Vacancies", and remove the approved shift.</p>
+<p>Thank you,<br>Rural Rosters Support</p>`;
 
           await transporter.sendMail({
             from: GMAIL_USER,
             to: officer.email,
             cc: 'ruralroster@gmail.com',
             subject: `[Rural Rosters] ${officerName} is requesting a shift`,
-            text: emailBody
+            html: htmlBody
           });
           console.log(`Email sent to ${officer.email}`);
         } catch (err) {
