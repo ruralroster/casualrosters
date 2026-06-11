@@ -90,6 +90,9 @@ const server = http.createServer((req, res) => {
         case 'getOfficerVacancies':
           result = await getOfficerVacancies(params.email);
           break;
+        case 'getStaffAvailableShifts':
+          result = await getStaffAvailableShifts(params.email);
+          break;
         case 'requestShifts':
           result = await requestShifts(params.email, params.name, params.shifts);
           break;
@@ -166,6 +169,30 @@ async function getOfficerLocations(email) {
   }
 }
 
+async function getStaffLocations(email) {
+  try {
+    const result = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'Users!A2:C'
+    });
+
+    const rows = result.data.values || [];
+    const normalizedEmail = email.toLowerCase().trim();
+
+    for (let row of rows) {
+      if (row[0] && String(row[0]).toLowerCase().trim() === normalizedEmail) {
+        const locationsStr = row[2] || '';
+        return locationsStr.split(',').map(l => l.trim());
+      }
+    }
+
+    return [];
+  } catch (err) {
+    console.error('getStaffLocations error:', err);
+    return [];
+  }
+}
+
 async function getOfficerVacancies(email) {
   try {
     const locations = await getOfficerLocations(email);
@@ -200,6 +227,57 @@ async function getOfficerVacancies(email) {
     return allVacancies;
   } catch (err) {
     console.error('getOfficerVacancies error:', err);
+    return [];
+  }
+}
+
+async function getStaffAvailableShifts(email) {
+  try {
+    const locations = await getStaffLocations(email);
+    
+    if (locations.length === 0) {
+      console.log('No locations found for staff member:', email);
+      return [];
+    }
+
+    console.log('Staff locations:', locations);
+
+    const allShifts = [];
+    const locationNames = ['Innisfail', 'Mareeba', 'Tully', 'Yarrabah', 'Atherton', 'Mossman', 'Babinda', 'Cairns', 'Telehealth'];
+
+    for (let location of locations) {
+      if (!locationNames.includes(location)) {
+        console.log('Skipping invalid location:', location);
+        continue;
+      }
+
+      try {
+        const result = await sheets.spreadsheets.values.get({
+          spreadsheetId: SHEET_ID,
+          range: `Vacancies - ${location}!A2:D`
+        });
+
+        const rows = result.data.values || [];
+        console.log(`Found ${rows.length} shifts in ${location}`);
+
+        for (let row of rows) {
+          if (row[0] && row[1]) {
+            allShifts.push({
+              date: formatDate(row[0]),
+              jobType: row[1],
+              location: row[2]
+            });
+          }
+        }
+      } catch (locErr) {
+        console.log(`Error reading ${location} vacancies:`, locErr.message);
+      }
+    }
+
+    console.log('Total shifts found:', allShifts.length);
+    return allShifts;
+  } catch (err) {
+    console.error('getStaffAvailableShifts error:', err);
     return [];
   }
 }
@@ -275,18 +353,7 @@ async function requestShifts(officerEmail, officerName, shifts) {
         .map(s => `• ${s.date} — ${s.jobType}`)
         .join('\n');
 
-      const emailBody = `Shift Request from ${officerName} (${officerEmail})
-
-Location: ${location}
-Shifts Requested:
-${shiftList}
-
-Status: Pending Approval
-
-Please review at: https://ruralroster.github.io/casualrosters/
-
----
-Rural Rosters System`;
+      const emailBody = `Shift Request from ${officerName} (${officerEmail})\n\nLocation: ${location}\nShifts Requested:\n${shiftList}\n\nStatus: Pending Approval\n\nPlease review at: https://ruralroster.github.io/casualrosters/\n\n---\nRural Rosters System`;
 
       // Send to each rostering officer for that location
       for (let officer of officers) {
