@@ -419,6 +419,10 @@
         } else {
             document.querySelectorAll('.tab-button')[0].style.display = 'none';
             document.querySelectorAll('.tab-button')[1].style.display = 'block';
+            // Activate Available Shifts tab
+            document.getElementById('tab-0').classList.remove('active');
+            document.getElementById('tab-1').classList.add('active');
+            document.querySelectorAll('.tab-button')[1].classList.add('active');
             setTimeout(loadAvailableShifts, 200);
         }
         
