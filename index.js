@@ -24,8 +24,8 @@ const SERVICE_ACCOUNT = {
 };
 
 // Gmail credentials - CHANGE THESE WHEN RuralRoster@gmail.com IS BACK
-const GMAIL_USER = 'dr.bengladwin@gmail.com';
-const GMAIL_APP_PASSWORD = 'isnx mjkk jtzj ubzj';
+const GMAIL_USER = 'ruralroster@gmail.com';
+const GMAIL_APP_PASSWORD = 'kyij mbwe ejlq nxfh';
 
 const SHEET_ID = '1iG4SwN4LzFnzKNht2uy8R8YV6XKIftRTbmfW7_YZwtM';
 
