@@ -495,16 +495,12 @@
             }
             
             const location = String(vac.location).trim();
-            const jobTypes = jobTypesByLocation[location] || [];
+            const jobType = String(vac.jobType).trim();
             
-            let jobTypeOptions = '<select class="vac-jobtype" style="width: 100%; padding: 4px; border: 1px solid #ddd;"><option value="">Select Job Type</option>';
-            jobTypes.forEach(jt => {
-                const selected = jt === vac.jobType ? ' selected' : '';
-                jobTypeOptions += '<option value="' + jt + '"' + selected + '>' + jt + '</option>';
-            });
-            jobTypeOptions += '</select>';
+            // Display as fixed text (disabled), not a dropdown
+            let jobTypeDisplay = '<input type="text" class="vac-jobtype" value="' + jobType + '" style="width: 100%; padding: 4px; border: 1px solid #ddd;" disabled>';
             
-            html += '<tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 10px;"><input type="date" class="vac-date" value="' + dateString + '" style="width: 100%; padding: 4px; border: 1px solid #ddd;"></td><td style="padding: 10px;"><input type="text" class="vac-location" value="' + location + '" style="width: 100%; padding: 4px; border: 1px solid #ddd;" disabled></td><td style="padding: 10px;">' + jobTypeOptions + '</td><td style="padding: 10px;"><button class="btn-secondary" onclick="removeVacancyRow(this)" style="padding: 4px 8px; font-size: 12px;">Remove</button></td></tr>';
+            html += '<tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 10px;"><input type="date" class="vac-date" value="' + dateString + '" style="width: 100%; padding: 4px; border: 1px solid #ddd;"></td><td style="padding: 10px;"><input type="text" class="vac-location" value="' + location + '" style="width: 100%; padding: 4px; border: 1px solid #ddd;" disabled></td><td style="padding: 10px;">' + jobTypeDisplay + '</td><td style="padding: 10px;"><button class="btn-secondary" onclick="removeVacancyRow(this)" style="padding: 4px 8px; font-size: 12px;">Remove</button></td></tr>';
         });
         html += '</table>';
         container.innerHTML = html;
