@@ -90,6 +90,9 @@ const server = http.createServer((req, res) => {
         case 'getJobTypesForLocation':
           result = await getJobTypesForLocation(params.location);
           break;
+        case 'saveOfficerVacancies':
+          result = await saveOfficerVacancies(params.email, params.vacancies);
+          break;
         case 'getOfficerVacancies':
           result = await getOfficerVacancies(params.email);
           break;
@@ -219,6 +222,42 @@ async function getStaffLocations(email) {
   } catch (err) {
     console.error('getStaffLocations error:', err);
     return [];
+  }
+}
+
+async function saveOfficerVacancies(email, vacancies) {
+  try {
+    if (!vacancies || vacancies.length === 0) {
+      return { success: true, message: 'No vacancies to save' };
+    }
+
+    // Group vacancies by location
+    const byLocation = {};
+    vacancies.forEach(vac => {
+      const location = String(vac.location).trim();
+      if (!byLocation[location]) {
+        byLocation[location] = [];
+      }
+      byLocation[location].push(vac);
+    });
+
+    // For each location, append vacancies to the Vacancies sheet
+    for (let location in byLocation) {
+      const locationVacancies = byLocation[location];
+      const rows = locationVacancies.map(vac => [vac.date, vac.jobType, location]);
+      
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: SHEET_ID,
+        range: `Vacancies - ${location}!A2:C`,
+        valueInputOption: 'RAW',
+        resource: { values: rows }
+      });
+    }
+
+    return { success: true, message: 'Vacancies saved successfully' };
+  } catch (err) {
+    console.error('saveOfficerVacancies error:', err);
+    return { error: err.toString() };
   }
 }
 
