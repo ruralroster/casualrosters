@@ -87,6 +87,9 @@ const server = http.createServer((req, res) => {
         case 'getOfficerLocations':
           result = await getOfficerLocations(params.email);
           break;
+        case 'getJobTypesForLocation':
+          result = await getJobTypesForLocation(params.location);
+          break;
         case 'getOfficerVacancies':
           result = await getOfficerVacancies(params.email);
           break;
@@ -166,6 +169,32 @@ async function getOfficerLocations(email) {
   } catch (err) {
     console.error('getOfficerLocations error:', err);
     return [];
+  }
+}
+
+async function getJobTypesForLocation(location) {
+  try {
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'Shift Types!A2:B'
+    });
+    
+    const rows = response.data.values || [];
+    const jobTypes = new Set();
+    
+    rows.forEach(row => {
+      const jobType = String(row[0]).trim();
+      const loc = String(row[1]).trim();
+      
+      if (loc === location && jobType) {
+        jobTypes.add(jobType);
+      }
+    });
+    
+    return { jobTypes: Array.from(jobTypes).sort() };
+  } catch (err) {
+    console.error('getJobTypesForLocation error:', err);
+    return { error: err.toString() };
   }
 }
 
