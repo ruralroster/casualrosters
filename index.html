@@ -547,11 +547,23 @@
         const row = locationSelect.closest('tr');
         const location = locationSelect.value;
         const jobTypeSelect = row.querySelector('.vac-jobtype');
-        const jobTypes = jobTypesByLocation[location] || [];
         
-        jobTypeSelect.innerHTML = '<option value="">Step 3: Select Job Type</option>';
-        jobTypes.forEach(jt => {
-            jobTypeSelect.innerHTML += '<option value="' + jt + '">' + jt + '</option>';
+        if (!location) {
+            jobTypeSelect.innerHTML = '<option value="">Step 3: Select Job Type</option>';
+            return;
+        }
+        
+        // Call backend to get job types for this location from Shift Types sheet
+        callBackend('getJobTypesForLocation', {location}).then(result => {
+            jobTypeSelect.innerHTML = '<option value="">Step 3: Select Job Type</option>';
+            if (result.jobTypes) {
+                result.jobTypes.forEach(jt => {
+                    jobTypeSelect.innerHTML += '<option value="' + jt + '">' + jt + '</option>';
+                });
+            }
+        }).catch(err => {
+            console.error('Error loading job types:', err);
+            jobTypeSelect.innerHTML = '<option value="">Error loading job types</option>';
         });
     }
 
