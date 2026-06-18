@@ -110,15 +110,6 @@
             margin-top: 20px;
         }
 
-        /* Location Selection */
-        .location-selection {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
         /* Checkbox Styles */
         .location-list {
             margin: 20px 0;
@@ -216,6 +207,18 @@
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
+        }
+
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .message.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
         }
     </style>
 </head>
@@ -315,7 +318,7 @@
                             if (callback) callback(result);
                         },
                         getJobTypesForOfficer: async (email) => {
-                            const result = await callBackend('getJobTypesForOfficer', {email});
+                            const result = await callBackend('getJobTypesForLocation', {location: 'Innisfail'});
                             if (callback) callback(result);
                         },
                         updateUserLocations: async (email, locations, role) => {
@@ -691,14 +694,18 @@
             return;
         }
         
+        showMessage('Saving settings...', 'info');
+        
         google.script.run.withSuccessHandler(function(success) {
-            if (success) {
+            if (success && success.success) {
                 userLocations = locs;
                 userQuals = ['Emergency', ...quals];
                 showMessage('✓ Settings saved', 'success');
                 loadAvailableShifts();
+            } else if (success && success.error) {
+                showMessage('Error saving settings: ' + success.error, 'error');
             }
-        }).updateUserLocations(currentUser.email, locs.join(','), userRole);
+        }).updateUserLocations(currentUser.email, locs.join(', '), userRole);
     }
 
     function logout() {
