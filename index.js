@@ -458,32 +458,6 @@ async function saveOfficerVacancies(email, vacancies) {
 
     const locationNames = ['Innisfail', 'Mareeba', 'Tully', 'Yarrabah', 'Atherton', 'Mossman', 'Babinda', 'Cairns', 'Telehealth'];
     
-    for (let location of locations) {
-      if (!locationNames.includes(location)) continue;
-      
-      const sheetName = `Vacancies - ${location}`;
-      
-      try {
-        const result = await sheets.spreadsheets.values.get({
-          spreadsheetId: SHEET_ID,
-          range: `${sheetName}!A2:D`
-        });
-
-        const existingRows = result.data.values || [];
-        
-        for (let i = existingRows.length - 1; i >= 0; i--) {
-          await sheets.spreadsheets.values.update({
-            spreadsheetId: SHEET_ID,
-            range: `${sheetName}!A${i + 2}:D${i + 2}`,
-            valueInputOption: 'RAW',
-            resource: { values: [[]] }
-          });
-        }
-      } catch (err) {
-        console.log(`Sheet ${sheetName} might not exist yet, continuing...`);
-      }
-    }
-
     const vacanciesByLocation = {};
     for (let vac of vacancies) {
       const loc = vac.location;
@@ -493,17 +467,34 @@ async function saveOfficerVacancies(email, vacancies) {
       vacanciesByLocation[loc].push(vac);
     }
 
-    for (let location in vacanciesByLocation) {
+    // Clear and update each location's sheet
+    for (let location of locations) {
+      if (!locationNames.includes(location)) continue;
+      
       const sheetName = `Vacancies - ${location}`;
-      const rows = vacanciesByLocation[location].map(vac => [vac.date, vac.jobType, location, '']);
-
-      if (rows.length > 0) {
-        await sheets.spreadsheets.values.append({
+      const newVacancies = vacanciesByLocation[location] || [];
+      
+      try {
+        // Clear all existing data in this location's sheet (A2 onwards)
+        await sheets.spreadsheets.values.clear({
           spreadsheetId: SHEET_ID,
-          range: `${sheetName}!A2:D`,
-          valueInputOption: 'RAW',
-          resource: { values: rows }
+          range: `${sheetName}!A2:D`
         });
+        console.log(`Cleared old vacancies from ${sheetName}`);
+        
+        // Append new vacancies only if there are any for this location
+        if (newVacancies.length > 0) {
+          const rows = newVacancies.map(vac => [vac.date, vac.jobType, location, '']);
+          await sheets.spreadsheets.values.append({
+            spreadsheetId: SHEET_ID,
+            range: `${sheetName}!A2:D`,
+            valueInputOption: 'RAW',
+            resource: { values: rows }
+          });
+          console.log(`Added ${rows.length} new vacancies to ${sheetName}`);
+        }
+      } catch (err) {
+        console.error(`Error updating ${sheetName}:`, err);
       }
     }
 
