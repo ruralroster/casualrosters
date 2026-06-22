@@ -500,7 +500,6 @@
             const location = String(vac.location).trim();
             const jobType = String(vac.jobType).trim();
             
-            // Display as fixed text (disabled), not a dropdown
             let jobTypeDisplay = '<input type="text" class="vac-jobtype" value="' + jobType + '" style="width: 100%; padding: 4px; border: 1px solid #ddd;" disabled>';
             
             html += '<tr style="border-bottom: 1px solid #f0f0f0;"><td style="padding: 10px;"><input type="date" class="vac-date" value="' + dateString + '" style="width: 100%; padding: 4px; border: 1px solid #ddd;"></td><td style="padding: 10px;"><input type="text" class="vac-location" value="' + location + '" style="width: 100%; padding: 4px; border: 1px solid #ddd;" disabled></td><td style="padding: 10px;">' + jobTypeDisplay + '</td><td style="padding: 10px;"><button class="btn-secondary" onclick="removeVacancyRow(this)" style="padding: 4px 8px; font-size: 12px;">Remove</button></td></tr>';
@@ -552,7 +551,6 @@
             return;
         }
         
-        // Call backend to get job types for this location from Shift Types sheet
         callBackend('getJobTypesForLocation', {location}).then(result => {
             jobTypeSelect.innerHTML = '<option value="">Step 3: Select Job Type</option>';
             if (result.jobTypes) {
@@ -684,6 +682,8 @@
         container.innerHTML = html;
     }
 
+    // Fix: now saves AST quals to backend as well as locations.
+    // V1 original only called updateUserLocations — quals were lost on reload.
     function saveAllSettings() {
         const locCheckboxes = document.querySelectorAll('#settingsContent input[value]');
         const locs = Array.from(locCheckboxes).filter(cb => cb.id.startsWith('loc-') && cb.checked).map(cb => cb.value);
@@ -695,17 +695,24 @@
         }
         
         showMessage('Saving settings...', 'info');
-        
-        google.script.run.withSuccessHandler(function(success) {
-            if (success && success.success) {
+
+        const newQuals = ['Emergency', ...quals];
+
+        Promise.all([
+            callBackend('updateUserLocations', { email: currentUser.email, locations: locs.join(', '), role: userRole }),
+            callBackend('updateUserAST', { email: currentUser.email, astQuals: newQuals.join(', ') })
+        ]).then(([locResult, astResult]) => {
+            if (locResult && locResult.error) {
+                showMessage('Error saving locations: ' + locResult.error, 'error');
+            } else if (astResult && astResult.error) {
+                showMessage('Error saving AST qualifications: ' + astResult.error, 'error');
+            } else {
                 userLocations = locs;
-                userQuals = ['Emergency', ...quals];
+                userQuals = newQuals;
                 showMessage('✓ Settings saved', 'success');
                 loadAvailableShifts();
-            } else if (success && success.error) {
-                showMessage('Error saving settings: ' + success.error, 'error');
             }
-        }).updateUserLocations(currentUser.email, locs.join(', '), userRole);
+        });
     }
 
     function logout() {
