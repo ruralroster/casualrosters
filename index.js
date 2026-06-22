@@ -147,34 +147,25 @@ async function checkUserExists(email, password) {
 
     const rows = result.data.values || [];
     const normalizedEmail = email.toLowerCase().trim();
-    let officerMatch = null;
-    let staffMatch = null;
 
-    for (let row of rows) {
-      const rowEmail = String(row[0]).toLowerCase().trim();
-      const rowPassword = String(row[4]).trim();
-      const rowRole = String(row[3]).trim();
-      
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowEmail = String(row[0] || '').toLowerCase().trim();
+      const rowPassword = String(row[4] || '').trim();
+      const rowRole = String(row[3] || '').trim();
+
+      console.log(`Row ${i}: email="${rowEmail}" role="${rowRole}" passwordMatch=${rowPassword === password}`);
+
       if (rowEmail === normalizedEmail && rowPassword === password) {
-        if (rowRole === 'Officer' && !officerMatch) {
-          officerMatch = row;
-        } else if (rowRole === 'Staff' && !staffMatch) {
-          staffMatch = row;
-        }
+        console.log(`Login match at row ${i}: ${normalizedEmail} as ${rowRole}`);
+        return {
+          email: row[0],
+          name: row[1],
+          locations: row[2],
+          role: rowRole,
+          astQuals: row[6] || 'Emergency'
+        };
       }
-    }
-
-    // Prefer Officer role if available, otherwise use Staff
-    const matchedRow = officerMatch || staffMatch;
-    
-    if (matchedRow) {
-      return {
-        email: matchedRow[0],
-        name: matchedRow[1],
-        locations: matchedRow[2],
-        role: matchedRow[3],
-        astQuals: matchedRow[6] || 'Emergency'
-      };
     }
 
     return { error: 'Invalid email or password' };
