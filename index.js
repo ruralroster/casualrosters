@@ -419,10 +419,19 @@ async function requestShifts(email, name, shifts) {
 
       for (let officer of officers) {
         try {
+          const shiftListText = locationShifts
+            .map(s => `${s.date} - ${s.jobType} @ ${location}`)
+            .join(', ');
+          
+          const approveLink = `mailto:ruralroster@gmail.com?subject=APPROVE: ${location} ${shiftListText} - ${name}&body=I approve this shift request for ${name} on ${shiftListText}`;
+          const denyLink = `mailto:ruralroster@gmail.com?subject=DENY: ${location} ${shiftListText} - ${name}&body=I deny this shift request for ${name} on ${shiftListText}. Reason: [Please provide reason]`;
+          
           const htmlBody = `<p>Dear ${officer.name},</p>
 <p><strong>${name}</strong> is requesting to cover the following shifts:</p>
 <p><strong>${shiftList}</strong></p>
-<p>Please review this request in the Rural Rosters system.</p>
+<p><a href="${approveLink}" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; margin-right: 10px;">To approve and reply to ${name}</a></p>
+<p><a href="${denyLink}" style="background: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">To deny and reply to ${name}</a></p>
+<p>To remove approved shifts from the system: Visit <a href="https://ruralroster.github.io/casualrosters/">https://ruralroster.github.io/casualrosters/</a>, log in with your credentials, go to "My Vacancies", and remove the approved shift.</p>
 <p>Thank you,<br>Rural Rosters Support</p>`;
 
           await transporter.sendMail({
