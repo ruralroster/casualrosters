@@ -28,6 +28,7 @@ const GMAIL_USER = 'ruralroster@gmail.com';
 const GMAIL_APP_PASSWORD = 'gckg msat pnzq ltug';
 
 const SHEET_ID = '1iG4SwN4LzFnzKNht2uy8R8YV6XKIftRTbmfW7_YZwtM';
+const FRONTEND_URL = 'https://ruralroster.github.io/casualrosters/';
 
 // Initialize JWT client for Sheets
 const auth = new JWT({
@@ -53,34 +54,29 @@ console.log('Credentials initialized');
 const server = http.createServer((req, res) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Content-Type', 'application/json');
 
-  // Handle preflight
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
     res.end();
     return;
   }
 
-  // Health check
   if (req.method === 'GET' && req.url === '/') {
     res.writeHead(200);
     res.end(JSON.stringify({ status: 'ok', service: 'Rural Rosters API' }));
     return;
   }
 
-  // Only POST
   if (req.method !== 'POST') {
     res.writeHead(405);
     res.end(JSON.stringify({ error: 'Method not allowed' }));
     return;
   }
 
-  // Parse body
   let body = '';
   req.on('data', chunk => body += chunk);
   req.on('end', async () => {
@@ -240,7 +236,6 @@ async function getJobTypesForLocation(location) {
     rows.forEach(row => {
       const jobType = String(row[0]).trim();
       const loc = String(row[1]).trim();
-      
       if (loc === location && jobType) {
         jobTypes.add(jobType);
       }
@@ -257,9 +252,7 @@ async function getOfficerVacancies(email) {
   try {
     const locations = await getOfficerLocations(email);
     
-    if (locations.length === 0) {
-      return [];
-    }
+    if (locations.length === 0) return [];
 
     const allVacancies = [];
     const locationNames = ['Innisfail', 'Mareeba', 'Tully', 'Yarrabah', 'Atherton', 'Mossman', 'Babinda', 'Cairns', 'Telehealth'];
@@ -403,27 +396,38 @@ async function requestShifts(email, name, shifts) {
     for (let location in shiftsByLocation) {
       const locationShifts = shiftsByLocation[location];
       const officers = officersByLocation[location] || [];
-      
-      const shiftList = locationShifts
-        .map(s => `${s.date} - ${s.jobType} @ ${location}`)
+
+      // HTML shift list for officer notification email body
+      const shiftListHtml = locationShifts
+        .map(s => `${s.date} - ${s.jobType} @ ${s.location}`)
         .join('<br>');
+
+      // Plain text shift list for mailto body (newline-separated, will be encoded)
+      const shiftListPlain = locationShifts
+        .map(s => `${s.date} - ${s.jobType} @ ${s.location}`)
+        .join('\n');
 
       for (let officer of officers) {
         try {
-          const shiftListText = locationShifts
-            .map(s => `${s.date} - ${s.jobType} @ ${location}`)
-            .join(', ');
-          
-          const approveLink = `mailto:ruralroster@gmail.com?subject=APPROVE: ${location} ${shiftListText} - ${name}&body=I approve this shift request for ${name} on ${shiftListText}`;
-          const denyLink = `mailto:ruralroster@gmail.com?subject=DENY: ${location} ${shiftListText} - ${name}&body=I deny this shift request for ${name} on ${shiftListText}. Reason: [Please provide reason]`;
-          
-          const htmlBody = `<p>Dear ${officer.name},</p>
+          // Approve mailto — pre-fills email TO staff member, signed by officer
+          const approveBody = encodeURIComponent(
+            `Dear ${name},\n\nYou have been approved for the following shift:\n\n${shiftListPlain}\n\nThanks for helping out!\n\n${officer.name}`
+          );
+          const approveLink = `mailto:${email}?subject=Your%20shift%20request%20has%20been%20approved&body=${approveBody}`;
+
+          // Deny mailto — pre-fills email TO staff member, signed by officer
+          const denyBody = encodeURIComponent(
+            `Dear ${name},\n\nUnfortunately, we are unable to approve your request for the following shift:\n\n${shiftListPlain}\n\nPlease contact the rostering officer if you have any questions.\n\n${officer.name}`
+          );
+          const denyLink = `mailto:${email}?subject=Unfortunately%20we%20have%20not%20been%20able%20to%20approve%20your%20shift%20request&body=${denyBody}`;
+
+          const htmlBody = `<p>Dear Rostering Officer,</p>
 <p><strong>${name}</strong> is requesting to cover the following shifts:</p>
-<p><strong>${shiftList}</strong></p>
-<p><a href="${approveLink}" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; margin-right: 10px;">To approve and reply to ${name}</a></p>
-<p><a href="${denyLink}" style="background: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">To deny and reply to ${name}</a></p>
-<p>To remove approved shifts from the system: Visit <a href="https://ruralroster.github.io/casualrosters/">https://ruralroster.github.io/casualrosters/</a>, log in with your credentials, go to "My Vacancies", and remove the approved shift.</p>
-<p>Thank you,<br>Rural Rosters Support</p>`;
+<p><strong>${shiftListHtml}</strong></p>
+<p>To approve and reply to ${name}: <a href="${approveLink}">${email}</a></p>
+<p>To deny and reply to ${name}: <a href="${denyLink}">${email}</a></p>
+<p>To remove approved shifts from the system: <a href="${FRONTEND_URL}">Rural Rosters Web App</a> — log in with your credentials, go to "My Vacancies", and remove the approved shift.</p>
+<p>Thank you,<br>Rural Rosters Shift Manager</p>`;
 
           await transporter.sendMail({
             from: GMAIL_USER,
@@ -467,7 +471,6 @@ async function saveOfficerVacancies(email, vacancies) {
       vacanciesByLocation[loc].push(vac);
     }
 
-    // Clear and update each location's sheet
     for (let location of locations) {
       if (!locationNames.includes(location)) continue;
       
@@ -475,14 +478,12 @@ async function saveOfficerVacancies(email, vacancies) {
       const newVacancies = vacanciesByLocation[location] || [];
       
       try {
-        // Clear all existing data in this location's sheet (A2 onwards)
         await sheets.spreadsheets.values.clear({
           spreadsheetId: SHEET_ID,
           range: `${sheetName}!A2:D`
         });
         console.log(`Cleared old vacancies from ${sheetName}`);
         
-        // Append new vacancies only if there are any for this location
         if (newVacancies.length > 0) {
           const rows = newVacancies.map(vac => [vac.date, vac.jobType, location, '']);
           await sheets.spreadsheets.values.append({
@@ -517,7 +518,6 @@ async function updateUserLocations(email, locations, role) {
     
     for (let i = 0; i < rows.length; i++) {
       if (String(rows[i][0]).toLowerCase().trim() === normalizedEmail) {
-        // Update column C (Locations)
         await sheets.spreadsheets.values.update({
           spreadsheetId: SHEET_ID,
           range: `Users!C${i + 2}`,
@@ -548,7 +548,6 @@ async function updateUserAST(email, astQuals) {
     
     for (let i = 0; i < rows.length; i++) {
       if (String(rows[i][0]).toLowerCase().trim() === normalizedEmail) {
-        // Update column G (AST Quals)
         await sheets.spreadsheets.values.update({
           spreadsheetId: SHEET_ID,
           range: `Users!G${i + 2}`,
@@ -571,13 +570,10 @@ async function countPendingRequests(email) {
   try {
     const locations = await getOfficerLocations(email);
     
-    if (locations.length === 0) {
-      return 0;
-    }
+    if (locations.length === 0) return 0;
 
     let count = 0;
 
-    // Count pending shift requests
     const requestsResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
       range: 'Requests!A2:G'
